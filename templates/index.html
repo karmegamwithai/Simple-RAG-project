@@ -1,322 +1,73 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <title>Local RAG Assistant</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      :root {
-        box-sizing: border-box;
-        padding-top: env(safe-area-inset-top, 0px);
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-      }
-      html {
-        scroll-padding-top: env(safe-area-inset-top, 0px);
-        height: 100%;
-      }
-      body {
-        height: 100%;
-        background: #0a0a0a;
-        font-family: "IBM Plex Mono", monospace;
-      }
-      .font-display {
-        font-family: "Space Grotesk", sans-serif;
-      }
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #111;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #3a3a3a;
-      }
-      .grain {
-        background-image: repeating-linear-gradient(
-          45deg,
-          rgba(250, 204, 21, 0.03) 0,
-          rgba(250, 204, 21, 0.03) 1px,
-          transparent 1px,
-          transparent 8px
-        );
-      }
-      .blink {
-        animation: blink 1.6s steps(1) infinite;
-      }
-      @keyframes blink {
-        50% {
-          opacity: 0.35;
-        }
-      }
-      textarea:focus,
-      button:focus-visible,
-      input:focus-visible {
-        outline: 2px solid #facc15;
-        outline-offset: 2px;
-      }
-    </style>
-  </head>
-  <body class="min-h-full text-stone-200">
-    <div class="flex flex-col lg:flex-row min-h-screen">
-      <!-- SIDEBAR -->
-      <aside
-        class="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r border-yellow-400/20 bg-[#0f0f0f] grain"
-      >
-        <div class="p-6 border-b border-yellow-400/20">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="w-2.5 h-2.5 bg-yellow-400 blink"></span>
-            <p class="text-[11px] tracking-wide text-yellow-400/70">
-              index // retrieve // answer
-            </p>
-          </div>
-          <h1
-            class="font-display text-2xl font-700 text-yellow-400 leading-tight"
-          >
-            RAG Assistant
-          </h1>
-          <p class="text-sm text-stone-400 mt-1">
-            Chat with your PDF using Gemini + FAISS, fully on your machine.
-          </p>
-        </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0b0c" />
+  <meta name="description" content="Ask questions about your PDFs with a Gemini and FAISS-powered RAG assistant." />
+  <title>RAG Studio — Your documents, explained.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Urbanist','sans-serif']},colors:{ink:'#0b0b0c',panel:'#161617',sun:'#facc15'}}}}</script>
+  <style>
+    body{background:#0b0b0c;color:#f6f6f5} .glow{background:radial-gradient(circle at 50% 50%,rgba(250,204,21,.16),transparent 65%)}
+    .grid-bg{background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:42px 42px}
+    .lift{transition:transform .25s ease,border-color .25s ease,background .25s ease}.lift:hover{transform:translateY(-5px);border-color:rgba(250,204,21,.45)}
+    .float{animation:float 5s ease-in-out infinite}@keyframes float{50%{transform:translateY(-9px)}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body class="font-sans antialiased selection:bg-yellow-300 selection:text-black">
+  <div class="min-h-screen overflow-hidden">
+    <header class="relative z-20 border-b border-white/10">
+      <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+        <a href="/" class="flex items-center gap-3" aria-label="RAG Studio home">
+          <span class="grid h-11 w-11 place-items-center rounded-2xl bg-sun text-ink shadow-lg shadow-yellow-500/10"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></span>
+          <span class="text-xl font-black tracking-tight">rag<span class="text-sun">studio.</span></span>
+        </a>
+        <div class="hidden items-center gap-8 text-sm font-semibold text-zinc-400 md:flex"><a class="hover:text-white" href="#how-it-works">How it works</a><a class="hover:text-white" href="#features">Features</a><a class="hover:text-white" href="#tech">Technology</a></div>
+        <a href="/chat" class="rounded-full border border-yellow-400/50 px-5 py-2.5 text-sm font-bold text-sun transition hover:bg-sun hover:text-ink">Open Chat <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
 
-        <div class="p-6 border-b border-yellow-400/20">
-          <h3 class="text-xs text-stone-400 mb-3">01 — Upload document</h3>
-          <label
-            for="pdfFile"
-            class="block border border-dashed border-yellow-400/40 bg-black/40 px-4 py-6 text-center cursor-pointer hover:border-yellow-400 transition-colors"
-          >
-            <span id="fileLabel" class="text-sm text-stone-400"
-              >Choose a .pdf file</span
-            >
-          </label>
-          <input type="file" id="pdfFile" accept=".pdf" class="hidden" />
-          <button
-            onclick="uploadPDF()"
-            id="uploadButton"
-            class="w-full mt-3 bg-yellow-400 text-black font-semibold text-sm py-2.5 hover:bg-yellow-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Process PDF
-          </button>
-          <div id="uploadStatus" class="mt-3 text-sm min-h-[1.25rem]"></div>
-        </div>
-
-        <div class="p-6">
-          <h3 class="text-xs text-stone-400 mb-3">02 — Pipeline</h3>
-          <ol class="space-y-2 text-sm">
-            <li class="flex items-center gap-3">
-              <span class="text-yellow-400">→</span>PDF
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="text-yellow-400">→</span>Chunks
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="text-yellow-400">→</span>Embeddings
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="text-yellow-400">→</span>FAISS index
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="text-yellow-400">→</span>Gemini LLM
-            </li>
-          </ol>
-        </div>
-      </aside>
-
-      <!-- MAIN -->
-      <main class="flex-1 flex flex-col min-h-screen">
-        <header
-          class="flex items-center justify-between px-6 py-5 border-b border-yellow-400/20 bg-[#0f0f0f]"
-        >
+    <main>
+      <section class="relative grid-bg">
+        <div class="pointer-events-none absolute inset-0 glow"></div>
+        <div class="relative mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-20 sm:px-8 lg:grid-cols-[1.04fr_.96fr] lg:pb-32 lg:pt-28">
           <div>
-            <h2 class="font-display text-lg font-600 text-stone-100">
-              Document Chat
-            </h2>
-            <p class="text-sm text-stone-500">
-              Answers grounded in your PDF, with sources
-            </p>
+            <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-yellow-400/25 bg-yellow-400/10 px-4 py-2 text-xs font-bold tracking-wide text-yellow-300"><span id="statusDot" class="h-2 w-2 rounded-full bg-zinc-500"></span><span id="statusText" aria-live="polite">Checking application status…</span></div>
+            <h1 class="max-w-3xl text-5xl font-black leading-[1.07] tracking-[-.045em] sm:text-6xl lg:text-[76px]">Your documents.<br/><span class="text-sun">Instant answers.</span><br/>Zero digging.</h1>
+            <p class="mt-7 max-w-xl text-lg leading-relaxed text-zinc-400">Turn complicated PDFs into simple conversations. Upload a document, ask anything, and get AI-powered answers grounded in your content.</p>
+            <div class="mt-9 flex flex-wrap items-center gap-4"><a href="/chat" class="inline-flex items-center gap-3 rounded-full bg-sun px-8 py-4 text-base font-extrabold text-ink shadow-xl shadow-yellow-400/15 transition hover:-translate-y-1 hover:bg-yellow-300">Launch RAG Chat <span class="text-xl">↗</span></a><a href="#how-it-works" class="rounded-full border border-white/20 px-7 py-4 font-bold text-white transition hover:border-yellow-400/50 hover:text-sun">See how it works ↓</a></div>
+            <div class="mt-12 flex flex-wrap gap-x-8 gap-y-3 text-sm font-semibold text-zinc-400"><span>✦ PDF understanding</span><span>✦ Source-backed answers</span><span>✦ Fast semantic search</span></div>
           </div>
-          <span
-            class="flex items-center gap-2 text-xs text-yellow-400 border border-yellow-400/40 px-3 py-1.5"
-          >
-            <span class="w-1.5 h-1.5 bg-yellow-400 blink"></span>Local LLM
-          </span>
-        </header>
-
-        <div id="chat" class="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-          <div class="assistant-message max-w-2xl">
-            <strong class="block text-xs text-yellow-400 mb-1"
-              >AI Assistant</strong
-            >
-            <p
-              class="text-sm text-stone-300 bg-[#141414] border border-stone-800 px-4 py-3"
-            >
-              Upload a PDF and ask me questions about the document.
-            </p>
+          <div class="relative mx-auto w-full max-w-xl float" aria-label="Preview of the RAG assistant conversation">
+            <div class="absolute -inset-5 rounded-[42px] bg-yellow-400/10 blur-3xl"></div>
+            <div class="relative overflow-hidden rounded-[32px] border border-white/15 bg-[#19191b] p-4 shadow-2xl shadow-black/60 sm:p-6">
+              <div class="flex items-center justify-between border-b border-white/10 pb-5"><div class="flex items-center gap-3"><div class="grid h-11 w-11 place-items-center rounded-2xl bg-sun font-black text-ink">✳</div><div><p class="font-extrabold">Document Assistant</p><p class="text-xs text-zinc-500">Gemini + FAISS</p></div></div><span class="rounded-full bg-yellow-400/10 px-3 py-1.5 text-xs font-bold text-sun">AI workspace</span></div>
+              <div class="py-7"><div class="mb-5 flex justify-end"><div class="max-w-[85%] rounded-[22px] rounded-br-md bg-sun px-5 py-4 font-semibold text-ink">What are the key insights in my document?</div></div><div class="flex items-start gap-3"><div class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-yellow-400/15 text-sun">✦</div><div class="rounded-[22px] rounded-tl-md border border-white/10 bg-[#252527] px-5 py-4 text-sm leading-relaxed text-zinc-200"><p class="mb-3 font-extrabold text-white">Here's what I found ✨</p><p>Your document highlights important findings and practical recommendations. I'll help you explore each point using relevant passages from the PDF.</p><div class="mt-4 inline-flex items-center gap-2 rounded-full bg-yellow-400/10 px-3 py-1.5 text-xs font-bold text-sun">▤ Source: your PDF</div></div></div></div>
+              <div class="flex items-center justify-between rounded-2xl border border-white/10 bg-[#101011] px-4 py-3 text-sm text-zinc-500"><span>Ask your document anything…</span><span class="grid h-9 w-9 place-items-center rounded-xl bg-sun font-bold text-ink">↑</span></div>
+            </div>
+            <div class="absolute -bottom-7 -left-3 rounded-2xl border border-white/15 bg-[#242426] px-5 py-3 text-sm font-bold shadow-xl sm:-left-8">⚡ Smart retrieval</div>
           </div>
         </div>
+      </section>
 
-        <div class="border-t border-yellow-400/20 bg-[#0f0f0f] p-4">
-          <div class="flex gap-3 items-end max-w-4xl mx-auto">
-            <textarea
-              id="question"
-              placeholder="Ask something about your document..."
-              rows="2"
-              class="flex-1 resize-none bg-black border border-stone-700 focus:border-yellow-400 px-4 py-3 text-sm text-stone-200 placeholder-stone-600"
-            ></textarea>
-            <button
-              onclick="askQuestion()"
-              id="askButton"
-              class="bg-yellow-400 text-black font-semibold text-sm px-6 py-3 hover:bg-yellow-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Ask
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
+      <section id="how-it-works" class="border-t border-white/10 bg-[#111112] px-5 py-24 sm:px-8"><div class="mx-auto max-w-7xl"><div class="mb-12 text-center"><p class="mb-4 text-sm font-extrabold uppercase tracking-[.2em] text-sun">Simple by design</p><h2 class="text-4xl font-black tracking-tight sm:text-5xl">Three steps. <span class="text-sun">Big clarity.</span></h2><p class="mt-4 text-zinc-400">No complex setup in the interface. Just your files and your questions.</p></div><div class="grid gap-5 md:grid-cols-3"><article class="lift rounded-[28px] border border-white/10 bg-panel p-8"><div class="mb-9 flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-400/10 text-3xl">📄</div><p class="mb-3 text-sm font-extrabold text-sun">01 / UPLOAD</p><h3 class="mb-3 text-2xl font-extrabold">Drop your PDF</h3><p class="leading-relaxed text-zinc-400">Choose a PDF to extract text and prepare it for intelligent search.</p></article><article class="lift rounded-[28px] border border-white/10 bg-panel p-8"><div class="mb-9 flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-400/10 text-3xl">🧠</div><p class="mb-3 text-sm font-extrabold text-sun">02 / RETRIEVE</p><h3 class="mb-3 text-2xl font-extrabold">Find the context</h3><p class="leading-relaxed text-zinc-400">Embeddings and FAISS locate the most relevant chunks of your document.</p></article><article class="lift rounded-[28px] border border-white/10 bg-panel p-8"><div class="mb-9 flex h-16 w-16 items-center justify-center rounded-2xl bg-yellow-400/10 text-3xl">💬</div><p class="mb-3 text-sm font-extrabold text-sun">03 / ANSWER</p><h3 class="mb-3 text-2xl font-extrabold">Ask away</h3><p class="leading-relaxed text-zinc-400">Gemini uses the retrieved context to produce answers with source references.</p></article></div></div></section>
 
-    <script>
-      function escapeHTML(text) {
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML;
-      }
+      <section id="features" class="px-5 py-24 sm:px-8"><div class="mx-auto max-w-7xl"><div class="mb-12"><p class="mb-4 text-sm font-extrabold uppercase tracking-[.2em] text-sun">Made for curious minds</p><h2 class="text-4xl font-black tracking-tight sm:text-5xl">Less scrolling. <span class="text-sun">More knowing.</span></h2></div><div class="grid gap-5 md:grid-cols-2"><div class="lift rounded-[28px] border border-white/10 bg-[#181819] p-8"><div class="mb-5 text-3xl">🔎</div><h3 class="text-2xl font-extrabold">Semantic search</h3><p class="mt-3 text-zinc-400">Find relevant information by meaning, not just matching keywords.</p></div><div class="lift rounded-[28px] border border-white/10 bg-[#181819] p-8"><div class="mb-5 text-3xl">📍</div><h3 class="text-2xl font-extrabold">Source references</h3><p class="mt-3 text-zinc-400">Review the document pages and snippets used to support responses.</p></div><div class="lift rounded-[28px] border border-white/10 bg-[#181819] p-8"><div class="mb-5 text-3xl">⚡</div><h3 class="text-2xl font-extrabold">Simple PDF workflow</h3><p class="mt-3 text-zinc-400">Upload, index, and start asking questions from one focused workspace.</p></div><div class="lift rounded-[28px] border border-white/10 bg-[#181819] p-8"><div class="mb-5 text-3xl">✨</div><h3 class="text-2xl font-extrabold">Gemini-powered responses</h3><p class="mt-3 text-zinc-400">Generate readable explanations using retrieved document context.</p></div></div></div></section>
 
-      document
-        .getElementById("pdfFile")
-        .addEventListener("change", function () {
-          const label = document.getElementById("fileLabel");
-          label.textContent = this.files.length
-            ? this.files[0].name
-            : "Choose a .pdf file";
-        });
+      <section id="tech" class="border-y border-white/10 bg-[#121213] px-5 py-16 sm:px-8"><div class="mx-auto flex max-w-7xl flex-col items-center gap-7 text-center"><p class="text-sm font-extrabold uppercase tracking-[.2em] text-sun">Under the hood</p><h2 class="text-3xl font-black sm:text-4xl">Built with tools that work together.</h2><div class="flex flex-wrap justify-center gap-3"> <span class="rounded-full border border-white/15 bg-white/5 px-6 py-3 font-bold">Python</span><span class="rounded-full border border-white/15 bg-white/5 px-6 py-3 font-bold">Flask</span><span class="rounded-full border border-white/15 bg-white/5 px-6 py-3 font-bold">FAISS</span><span class="rounded-full border border-white/15 bg-white/5 px-6 py-3 font-bold">Gemini API</span><span class="rounded-full border border-white/15 bg-white/5 px-6 py-3 font-bold">Tailwind CSS</span></div></div></section>
 
-      async function uploadPDF() {
-        const fileInput = document.getElementById("pdfFile");
-        const status = document.getElementById("uploadStatus");
-        const button = document.getElementById("uploadButton");
-
-        if (!fileInput.files.length) {
-          status.innerHTML =
-            "<span class='text-red-400'>Please select a PDF.</span>";
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
-
-        button.disabled = true;
-        status.innerHTML =
-          "<span class='text-stone-400'>Processing PDF...</span>";
-
-        try {
-          const response = await fetch("/upload", {
-            method: "POST",
-            body: formData,
-          });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.error || "Upload failed.");
-          status.innerHTML = `<span class="text-yellow-400">✓ ${escapeHTML(data.filename)} indexed into ${data.chunks} chunks.</span>`;
-        } catch (error) {
-          status.innerHTML = `<span class="text-red-400">${escapeHTML(error.message)}</span>`;
-        } finally {
-          button.disabled = false;
-        }
-      }
-
-      async function askQuestion() {
-        const questionInput = document.getElementById("question");
-        const question = questionInput.value.trim();
-        const chat = document.getElementById("chat");
-        const button = document.getElementById("askButton");
-
-        if (!question) return;
-
-        chat.insertAdjacentHTML(
-          "beforeend",
-          `
-    <div class="user-message max-w-2xl ml-auto">
-      <strong class="block text-xs text-stone-500 mb-1 text-right">You</strong>
-      <p class="text-sm text-black bg-yellow-400 px-4 py-3">${escapeHTML(question)}</p>
-    </div>
-  `,
-        );
-
-        questionInput.value = "";
-        button.disabled = true;
-
-        const loading = document.createElement("div");
-        loading.className = "assistant-message max-w-2xl";
-        loading.innerHTML = `
-    <strong class="block text-xs text-yellow-400 mb-1">AI Assistant</strong>
-    <p class="text-sm text-stone-400 bg-[#141414] border border-stone-800 px-4 py-3">Searching document...</p>
-  `;
-        chat.appendChild(loading);
-        chat.scrollTop = chat.scrollHeight;
-
-        try {
-          const response = await fetch("/ask", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: question }),
-          });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.error || "Request failed.");
-
-          loading.remove();
-
-          let sourceHTML = "";
-          if (data.sources) {
-            sourceHTML += `<div class="mt-3 space-y-2">
-        <h4 class="text-xs text-yellow-400">Sources</h4>`;
-            data.sources.forEach((source) => {
-              sourceHTML += `
-          <div class="border border-stone-800 bg-black/60 px-3 py-2">
-            <strong class="text-xs text-stone-300">[${source.id}] ${escapeHTML(source.source)}</strong>
-            <span class="block text-xs text-stone-500">Page ${source.page}</span>
-            <p class="text-xs text-stone-500 mt-1">${escapeHTML(source.preview)}...</p>
-          </div>`;
-            });
-            sourceHTML += `</div>`;
-          }
-
-          const answer = document.createElement("div");
-          answer.className = "assistant-message max-w-2xl";
-          answer.innerHTML = `
-      <strong class="block text-xs text-yellow-400 mb-1">AI Assistant</strong>
-      <p class="text-sm text-stone-200 bg-[#141414] border border-stone-800 px-4 py-3">${escapeHTML(data.answer)}</p>
-      ${sourceHTML}
-    `;
-          chat.appendChild(answer);
-        } catch (error) {
-          loading.innerHTML = `
-      <strong class="block text-xs text-red-400 mb-1">Error</strong>
-      <p class="text-sm text-red-300 bg-[#1a0f0f] border border-red-900 px-4 py-3">${escapeHTML(error.message)}</p>
-    `;
-        } finally {
-          button.disabled = false;
-          chat.scrollTop = chat.scrollHeight;
-        }
-      }
-
-      document
-        .getElementById("question")
-        .addEventListener("keydown", function (event) {
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            askQuestion();
-          }
-        });
-    </script>
-  </body>
+      <section class="px-5 py-24 sm:px-8"><div class="relative mx-auto max-w-7xl overflow-hidden rounded-[36px] bg-sun px-8 py-16 text-center text-ink sm:px-16"><div class="pointer-events-none absolute -right-10 -top-24 h-72 w-72 rounded-full border-[45px] border-black/5"></div><h2 class="relative text-4xl font-black tracking-tight sm:text-6xl">Ready to chat with your PDF?</h2><p class="relative mx-auto mt-5 max-w-xl text-lg font-semibold text-black/70">Give your documents a voice. Your next answer is one question away.</p><a href="/chat" class="relative mt-8 inline-flex items-center gap-3 rounded-full bg-ink px-9 py-4 font-extrabold text-white transition hover:-translate-y-1">Start chatting now <span>↗</span></a></div></section>
+    </main>
+    <footer class="border-t border-white/10 px-5 py-7 sm:px-8"><div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-zinc-500 sm:flex-row"><span class="font-extrabold text-white">rag<span class="text-sun">studio.</span></span><span>Built for better conversations with your documents.</span><a href="/chat" class="font-bold text-sun hover:text-yellow-200">Open assistant ↗</a></div></footer>
+  </div>
+  <script>
+    async function checkStatus(){const dot=document.getElementById('statusDot');const label=document.getElementById('statusText');try{const response=await fetch('/health',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)throw new Error('Backend unavailable');const data=await response.json();if(data.status!=='ok')throw new Error('Backend unavailable');dot.className='h-2 w-2 rounded-full bg-green-400';label.textContent='RAG application is online';}catch(e){dot.className='h-2 w-2 rounded-full bg-amber-400';label.textContent='Backend status unavailable';}}
+    checkStatus();
+  </script>
+</body>
 </html>
