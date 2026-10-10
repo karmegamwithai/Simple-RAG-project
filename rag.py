@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import threading
 import time
 from pathlib import Path
@@ -34,22 +35,7 @@ DEFAULT_TOP_K = int(os.getenv('RAG_TOP_K', '5'))
 API_KEY = os.getenv('GEMINI_API_KEY', '').strip()
 if not API_KEY:
     raise RuntimeError('GEMINI_API_KEY is missing. Set it in your .env file.')
-    
-load_dotenv(override=True)
-
-GEMINI_API_KEY = os.getenv(
-    "GEMINI_API_KEY", ""
-).strip()
-
-if not GEMINI_API_KEY:
-    raise RuntimeError(
-        "GEMINI_API_KEY is missing from .env"
-    )
-
-gemini_client = genai.Client(
-    api_key=GEMINI_API_KEY,
-    vertexai=False
-)
+gemini_client = genai.Client(api_key=API_KEY, vertexai=False)
 _store_lock = threading.RLock()
 
 
@@ -88,9 +74,9 @@ def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
 
 
 def _embed_batch(texts: List[str], task_type: str) -> List[List[float]]:
-    """Embed a small batch, retrying transient failures with bounded backoff."""
-    last_error = None
-    for attempt in range(4):
+    """Batch Gemini embeddings and honor server-specified quota retry delays."""
+    max_attempts = 6
+    for attempt in range(max_attempts):
         try:
             response = gemini_client.models.embed_content(
                 model=EMBED_MODEL,
@@ -105,20 +91,33 @@ def _embed_batch(texts: List[str], task_type: str) -> List[List[float]]:
                 raise RuntimeError('Unexpected Gemini embedding count')
             vectors = []
             for embedding in embeddings:
-                if not embedding.values or len(embedding.values) != EMBED_DIM:
+                if embedding.values is None or len(embedding.values) != EMBED_DIM:
                     raise RuntimeError('Gemini returned an invalid embedding dimension')
                 vectors.append(embedding.values)
             return vectors
         except Exception as exc:
-            last_error = exc
-            message = str(exc).lower()
-            if any(s in message for s in ('401', '403', 'unauthenticated', 'permission_denied', 'invalid api key')):
-                break
-            if not any(s in message for s in ('429', '503', '500', '502', '504', 'resource_exhausted', 'unavailable', 'deadline')):
-                break
-            if attempt < 3:
-                time.sleep(min(2 ** attempt, 8))
-    raise RuntimeError(f'Gemini embedding request failed: {last_error}') from last_error
+            message = str(exc)
+            lower = message.lower()
+            retryable = any(x in lower for x in (
+                '429', '503', '500', '502', '504',
+                'resource_exhausted', 'unavailable', 'deadline_exceeded'
+            ))
+            if not retryable or attempt == max_attempts - 1:
+                raise RuntimeError(f'Gemini embedding request failed: {exc}') from exc
+
+            # Gemini often includes "Please retry in 32.13s" or "retryDelay: 32s".
+            match = re.search(r'please retry in\s+([\d.]+)s', message, re.I)
+            if not match:
+                match = re.search(r"['\"]retryDelay['\"]\s*:\s*['\"]([\d.]+)s", message)
+            if match:
+                delay = float(match.group(1)) + 1.0
+            else:
+                delay = min(10 * (2 ** attempt), 90)
+            delay = min(delay, 120)
+            print(f'Gemini API temporarily rate-limited; retrying in {delay:.1f}s '
+                  f'(attempt {attempt + 2}/{max_attempts})')
+            time.sleep(delay)
+    raise RuntimeError('Gemini embedding retry limit exceeded')
 
 
 def get_embeddings(texts: List[str], task_type: str = 'RETRIEVAL_DOCUMENT') -> np.ndarray:
