@@ -1,7 +1,0 @@
-{
-  "embedding_model": "gemini-embedding-001",
-  "embedding_provider": "google-genai",
-  "dimension": 768,
-  "chunk_size": 1200,
-  "chunk_overlap": 200
-}

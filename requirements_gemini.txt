@@ -1,6 +1,0 @@
-flask
-google-genai
-faiss-cpu
-numpy
-pymupdf
-python-dotenv
