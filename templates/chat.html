@@ -1,61 +1,448 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>RAG Studio | AI Document Chat</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script>
-<style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{font-family:Urbanist,sans-serif;background:#090909;color:#f6f6f2}.panel{background:#151515;border:1px solid #303027}.muted{color:#a6a69b}.accent{color:#f9df4b}.accent-bg{background:#f9df4b;color:#17160b}.scroll::-webkit-scrollbar{width:6px}.scroll::-webkit-scrollbar-thumb{background:#555348;border-radius:20px}.bubble{white-space:pre-wrap;overflow-wrap:anywhere}button:focus-visible,a:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid #f9df4b;outline-offset:3px}.grid-pattern{background-image:radial-gradient(#f9df4b15 1px,transparent 1px);background-size:20px 20px}@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
-</style>
-</head>
-<body>
-<div class="mx-auto max-w-[1750px] min-h-screen lg:h-screen p-3 sm:p-4 lg:p-5 flex flex-col lg:flex-row gap-4">
-<aside class="panel rounded-[28px] lg:w-[345px] lg:shrink-0 overflow-hidden flex flex-col lg:overflow-y-auto scroll">
- <div class="p-5 sm:p-6 border-b border-white/10">
-  <a href="/" class="inline-flex items-center gap-2 muted hover:text-yellow-300 text-sm font-bold mb-6"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back to home</a>
-  <div class="flex items-center gap-3"><div class="accent-bg w-12 h-12 rounded-2xl grid place-items-center"><i data-lucide="brain-circuit" class="w-7 h-7"></i></div><div><h1 class="text-2xl font-black tracking-tight">RAG<span class="accent">.studio</span></h1><p class="muted text-xs">Ask your documents anything.</p></div></div>
- </div>
- <div class="p-5 sm:p-6 border-b border-white/10">
-  <div class="flex justify-between items-center gap-2 mb-4"><h2 class="text-lg font-extrabold">01. Add your document</h2><span class="rounded-full bg-[#303027] px-3 py-1 text-xs accent font-bold">PDF</span></div>
-  <label for="pdfFile" class="cursor-pointer block rounded-[24px] border-2 border-dashed border-[#68613b] bg-[#242216] hover:bg-[#302c18] hover:border-[#f9df4b] transition-colors p-6 text-center">
-   <span class="mx-auto mb-3 w-14 h-14 rounded-2xl bg-[#f9df4b]/15 accent grid place-items-center"><i data-lucide="file-up" class="w-7 h-7"></i></span>
-   <strong class="block text-base">Choose a PDF file</strong><span id="fileLabel" class="block text-sm muted mt-1 break-all">Tap to browse documents</span><span class="block text-xs text-[#8c8b7e] mt-2">Your file is sent to your Flask server for indexing.</span>
-  </label>
-  <input id="pdfFile" type="file" accept=".pdf,application/pdf" class="sr-only">
-  <button id="uploadButton" onclick="uploadPDF()" class="accent-bg w-full rounded-2xl mt-4 px-5 py-3.5 font-extrabold hover:bg-yellow-200 transition flex items-center justify-center gap-2 disabled:opacity-50"><i data-lucide="sparkles" class="w-4 h-4"></i> Process PDF</button>
-  <p id="uploadStatus" role="status" aria-live="polite" class="text-sm muted mt-3 min-h-5 break-words">No document processed in this session.</p>
- </div>
- <div class="p-5 sm:p-6">
-  <h2 class="text-lg font-extrabold mb-3">02. How RAG works</h2>
-  <div class="rounded-[24px] bg-[#202019] border border-[#38362b] p-4 sm:p-5 space-y-4">
-   <div class="flex gap-3"><span class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black">1</span><div><h3 class="font-bold">Upload & extract</h3><p class="text-sm muted">Read text from the pages of your PDF.</p></div></div>
-   <div class="flex gap-3"><span class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black">2</span><div><h3 class="font-bold">Chunk & embed</h3><p class="text-sm muted">Split content into searchable text embeddings.</p></div></div>
-   <div class="flex gap-3"><span class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black">3</span><div><h3 class="font-bold">Retrieve with FAISS</h3><p class="text-sm muted">Find relevant document passages for your question.</p></div></div>
-   <div class="flex gap-3"><span class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black">4</span><div><h3 class="font-bold">Answer with Gemini</h3><p class="text-sm muted">Generate an answer using the retrieved context and show sources.</p></div></div>
-  </div>
-  <div class="mt-5 rounded-2xl border border-[#38362b] p-4"><div class="flex gap-2 items-center accent font-bold text-sm"><i data-lucide="shield-check" class="w-4 h-4"></i> Source-aware answers</div><p class="text-sm muted mt-2">Review page numbers and excerpts returned by the backend. AI responses may still contain mistakes.</p></div>
- </div>
- <div class="mt-auto px-6 py-4 border-t border-white/10 text-xs muted">Powered by Gemini + FAISS · Python Flask</div>
-</aside>
-<main class="panel rounded-[28px] flex-1 min-w-0 min-h-[75vh] lg:min-h-0 overflow-hidden flex flex-col">
- <header class="p-4 sm:px-7 sm:py-5 border-b border-white/10 flex items-center justify-between gap-3"><div class="flex gap-3 items-center min-w-0"><div class="w-11 h-11 rounded-2xl bg-[#38331b] accent grid place-items-center shrink-0"><i data-lucide="bot" class="w-6 h-6"></i></div><div class="min-w-0"><h2 class="text-lg sm:text-xl font-black">Document Chat</h2><p class="text-xs sm:text-sm muted">Ask questions, get grounded answers.</p></div></div><span class="hidden sm:inline-flex rounded-full bg-[#302d1b] border border-[#575032] accent px-3 py-2 text-xs font-bold items-center gap-2"><span class="w-2 h-2 rounded-full bg-yellow-300"></span> Gemini + FAISS</span></header>
- <section id="chat" aria-live="polite" class="scroll grid-pattern flex-1 min-h-[350px] overflow-y-auto p-4 sm:p-7 space-y-5">
-  <div id="welcome" class="max-w-2xl mx-auto text-center py-6 sm:py-12"><div class="w-20 h-20 rounded-[28px] accent-bg grid place-items-center mx-auto mb-6 shadow-[0_0_70px_#f9df4b22]"><i data-lucide="messages-square" class="w-10 h-10"></i></div><p class="accent uppercase tracking-[.2em] text-xs font-black">Your AI research companion</p><h3 class="text-3xl sm:text-5xl font-black leading-tight mt-3">Your PDFs have <span class="accent">answers.</span></h3><p class="muted text-sm sm:text-base max-w-md mx-auto mt-4">Upload a PDF, ask a question, and explore answers alongside supporting page references from your document.</p><div class="flex flex-wrap justify-center gap-2 mt-7"><button onclick="suggest('Summarize the key points of this document')" class="rounded-full border border-[#68613b] px-4 py-2 text-sm font-bold hover:bg-[#33301d]">✦ Summarize key points</button><button onclick="suggest('What are the main conclusions?')" class="rounded-full border border-[#68613b] px-4 py-2 text-sm font-bold hover:bg-[#33301d]">✦ Main conclusions</button><button onclick="suggest('Explain this document in simple words')" class="rounded-full border border-[#68613b] px-4 py-2 text-sm font-bold hover:bg-[#33301d]">✦ Explain simply</button></div></div>
- </section>
- <footer class="border-t border-white/10 p-3 sm:p-5 bg-[#171717]"><div class="max-w-4xl mx-auto rounded-[24px] bg-[#262622] border border-[#4b4839] focus-within:border-[#f9df4b] flex items-end p-2 gap-2"><textarea id="question" rows="2" aria-label="Ask a question" placeholder="Ask anything about your PDF..." class="flex-1 min-w-0 bg-transparent outline-none resize-none px-3 py-2 text-sm sm:text-base placeholder:text-[#8b8a80] max-h-40"></textarea><button id="askButton" onclick="askQuestion()" aria-label="Send message" class="accent-bg rounded-2xl w-12 h-12 shrink-0 grid place-items-center hover:bg-yellow-200 disabled:opacity-50"><i data-lucide="arrow-up" class="w-5 h-5"></i></button></div><p class="text-center text-xs muted mt-3">Enter to send · Shift + Enter for a new line · Answers may include source citations</p></footer>
-</main>
-</div>
-<script>
-if(window.lucide)lucide.createIcons();
-const $=id=>document.getElementById(id);
-function escapeHTML(value){const el=document.createElement('div');el.textContent=String(value??'');return el.innerHTML}
-$('pdfFile').addEventListener('change',e=>{$('fileLabel').textContent=e.target.files[0]?.name||'Tap to browse documents'});
-function suggest(q){$('question').value=q;$('question').focus()}
-function appendMessage(role,message){$('welcome')?.remove();const item=document.createElement('div');item.className='flex '+(role==='user'?'justify-end':'justify-start');const isUser=role==='user';item.innerHTML=`<div class="max-w-[95%] sm:max-w-[85%] xl:max-w-[75%] min-w-0"><p class="text-xs font-bold mb-2 ${isUser?'text-right muted':'accent'}">${isUser?'You':'✦ RAG Assistant'}</p><div class="bubble rounded-[22px] ${isUser?'rounded-tr-md accent-bg':'rounded-tl-md bg-[#262622] border border-[#474438]'} px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base leading-relaxed">${escapeHTML(message)}</div><div class="sources space-y-2 mt-3"></div></div>`;$('chat').appendChild(item);$('chat').scrollTop=$('chat').scrollHeight;return item}
-async function parseResponse(response){const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||`Request failed (HTTP ${response.status})`);return data}
-async function uploadPDF(){const file=$('pdfFile').files[0],status=$('uploadStatus'),button=$('uploadButton');if(!file){status.textContent='Please choose a PDF first.';status.className='text-sm text-red-400 mt-3';return}if(!file.name.toLowerCase().endsWith('.pdf')){status.textContent='Only PDF files are supported.';status.className='text-sm text-red-400 mt-3';return}const body=new FormData();body.append('file',file);button.disabled=true;status.className='text-sm text-yellow-200 mt-3';status.textContent='Processing document, please wait…';try{const data=await parseResponse(await fetch('/upload',{method:'POST',body}));status.className='text-sm accent mt-3 break-words';status.textContent=`✓ ${data.filename||file.name} indexed${data.chunks!=null?' · '+data.chunks+' chunks':''}`;appendMessage('assistant',`Your document “${data.filename||file.name}” is ready. Ask a question to get started!`)}catch(error){status.className='text-sm text-red-400 mt-3 break-words';status.textContent=error.message}finally{button.disabled=false}}
-async function askQuestion(){const input=$('question'),question=input.value.trim();if(!question)return;input.value='';appendMessage('user',question);const pending=appendMessage('assistant','Searching the document and preparing an answer…');const button=$('askButton');button.disabled=true;try{const data=await parseResponse(await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})}));pending.querySelector('.bubble').textContent=String(data.answer??'No answer was returned.');if(Array.isArray(data.sources)&&data.sources.length){const area=pending.querySelector('.sources');const title=document.createElement('h4');title.className='text-xs font-black uppercase tracking-wider accent';title.textContent=`Sources (${data.sources.length})`;area.appendChild(title);for(const source of data.sources){const card=document.createElement('div');card.className='rounded-2xl bg-[#22221e] border border-[#474438] p-3 sm:p-4';card.innerHTML=`<div class="flex flex-wrap gap-2 items-center text-sm font-extrabold accent"><i data-lucide="file-text" class="w-4 h-4"></i> ${escapeHTML(source.source||'Document')} ${source.page!=null?`<span class="rounded-full bg-[#393520] px-2 py-0.5 text-xs">Page ${escapeHTML(source.page)}</span>`:''} ${source.id!=null?`<span class="text-xs muted">#${escapeHTML(source.id)}</span>`:''}</div><p class="text-sm muted mt-2 whitespace-pre-wrap break-words">${escapeHTML(source.preview||'No excerpt provided')}</p>`;area.appendChild(card)}}if(window.lucide)lucide.createIcons()}catch(error){const bubble=pending.querySelector('.bubble');bubble.textContent='Unable to answer: '+error.message;bubble.classList.add('text-red-300')}finally{button.disabled=false;$('chat').scrollTop=$('chat').scrollHeight}}
-$('question').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askQuestion()}});
-</script>
-</body></html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RAG Studio | AI Document Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Urbanist, sans-serif;
+        background: #090909;
+        color: #f6f6f2;
+      }
+      .panel {
+        background: #151515;
+        border: 1px solid #303027;
+      }
+      .muted {
+        color: #a6a69b;
+      }
+      .accent {
+        color: #f9df4b;
+      }
+      .accent-bg {
+        background: #f9df4b;
+        color: #17160b;
+      }
+      .scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+      .scroll::-webkit-scrollbar-thumb {
+        background: #555348;
+        border-radius: 20px;
+      }
+      .bubble {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      textarea:focus-visible,
+      label:focus-within {
+        outline: 2px solid #f9df4b;
+        outline-offset: 3px;
+      }
+      .grid-pattern {
+        background-image: radial-gradient(#f9df4b15 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *:before,
+        *:after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="mx-auto max-w-[1750px] min-h-screen lg:h-screen p-3 sm:p-4 lg:p-5 flex flex-col lg:flex-row gap-4"
+    >
+      <aside
+        class="panel rounded-[28px] lg:w-[345px] lg:shrink-0 overflow-hidden flex flex-col lg:overflow-y-auto scroll"
+      >
+        <div class="p-5 sm:p-6 border-b border-white/10">
+          <a
+            href="/"
+            class="inline-flex items-center gap-2 muted hover:text-yellow-300 text-sm font-bold mb-6"
+            ><i data-lucide="arrow-left" class="w-4 h-4"></i> Back to home</a
+          >
+          <div class="flex items-center gap-3">
+            <div
+              class="accent-bg w-12 h-12 rounded-2xl grid place-items-center"
+            >
+              <i data-lucide="brain-circuit" class="w-7 h-7"></i>
+            </div>
+            <div>
+              <h1 class="text-2xl font-black tracking-tight">
+                RAG<span class="accent">.studio</span>
+              </h1>
+              <p class="muted text-xs">Ask your documents anything.</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-5 sm:p-6 border-b border-white/10">
+          <div class="flex justify-between items-center gap-2 mb-4">
+            <h2 class="text-lg font-extrabold">01. Add your document</h2>
+            <span
+              class="rounded-full bg-[#303027] px-3 py-1 text-xs accent font-bold"
+              >PDF</span
+            >
+          </div>
+          <label
+            for="pdfFile"
+            class="cursor-pointer block rounded-[24px] border-2 border-dashed border-[#68613b] bg-[#242216] hover:bg-[#302c18] hover:border-[#f9df4b] transition-colors p-6 text-center"
+          >
+            <span
+              class="mx-auto mb-3 w-14 h-14 rounded-2xl bg-[#f9df4b]/15 accent grid place-items-center"
+              ><i data-lucide="file-up" class="w-7 h-7"></i
+            ></span>
+            <strong class="block text-base">Choose a PDF file</strong
+            ><span id="fileLabel" class="block text-sm muted mt-1 break-all"
+              >Tap to browse documents</span
+            ><span class="block text-xs text-[#8c8b7e] mt-2"
+              >Your file is sent to your Flask server for indexing.</span
+            >
+          </label>
+          <input
+            id="pdfFile"
+            type="file"
+            accept=".pdf,application/pdf"
+            class="sr-only"
+          />
+          <button
+            id="uploadButton"
+            onclick="uploadPDF()"
+            class="accent-bg w-full rounded-2xl mt-4 px-5 py-3.5 font-extrabold hover:bg-yellow-200 transition flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Process PDF
+          </button>
+          <p
+            id="uploadStatus"
+            role="status"
+            aria-live="polite"
+            class="text-sm muted mt-3 min-h-5 break-words"
+          >
+            No document processed in this session.
+          </p>
+        </div>
+        <div class="p-5 sm:p-6">
+          <h2 class="text-lg font-extrabold mb-3">02. How RAG works</h2>
+          <div
+            class="rounded-[24px] bg-[#202019] border border-[#38362b] p-4 sm:p-5 space-y-4"
+          >
+            <div class="flex gap-3">
+              <span
+                class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black"
+                >1</span
+              >
+              <div>
+                <h3 class="font-bold">Upload & extract</h3>
+                <p class="text-sm muted">
+                  Read text from the pages of your PDF.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <span
+                class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black"
+                >2</span
+              >
+              <div>
+                <h3 class="font-bold">Chunk & embed</h3>
+                <p class="text-sm muted">
+                  Split content into searchable text embeddings.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <span
+                class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black"
+                >3</span
+              >
+              <div>
+                <h3 class="font-bold">Retrieve with FAISS</h3>
+                <p class="text-sm muted">
+                  Find relevant document passages for your question.
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <span
+                class="w-9 h-9 rounded-xl accent-bg shrink-0 grid place-items-center font-black"
+                >4</span
+              >
+              <div>
+                <h3 class="font-bold">Answer with Gemini</h3>
+                <p class="text-sm muted">
+                  Generate an answer using the retrieved context and show
+                  sources.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 rounded-2xl border border-[#38362b] p-4">
+            <div class="flex gap-2 items-center accent font-bold text-sm">
+              <i data-lucide="shield-check" class="w-4 h-4"></i> Source-aware
+              answers
+            </div>
+            <p class="text-sm muted mt-2">
+              Review page numbers and excerpts returned by the backend. AI
+              responses may still contain mistakes.
+            </p>
+          </div>
+        </div>
+        <div class="mt-auto px-6 py-4 border-t border-white/10 text-xs muted">
+          Powered by Gemini + FAISS · Python Flask
+        </div>
+      </aside>
+      <main
+        class="panel rounded-[28px] flex-1 min-w-0 min-h-[75vh] lg:min-h-0 overflow-hidden flex flex-col"
+      >
+        <header
+          class="p-4 sm:px-7 sm:py-5 border-b border-white/10 flex items-center justify-between gap-3"
+        >
+          <div class="flex gap-3 items-center min-w-0">
+            <div
+              class="w-11 h-11 rounded-2xl bg-[#38331b] accent grid place-items-center shrink-0"
+            >
+              <i data-lucide="bot" class="w-6 h-6"></i>
+            </div>
+            <div class="min-w-0">
+              <h2 class="text-lg sm:text-xl font-black">Document Chat</h2>
+              <p class="text-xs sm:text-sm muted">
+                Ask questions, get grounded answers.
+              </p>
+            </div>
+          </div>
+          <span
+            class="hidden sm:inline-flex rounded-full bg-[#302d1b] border border-[#575032] accent px-3 py-2 text-xs font-bold items-center gap-2"
+            ><span class="w-2 h-2 rounded-full bg-yellow-300"></span> Gemini +
+            FAISS</span
+          >
+        </header>
+        <section
+          id="chat"
+          aria-live="polite"
+          class="scroll grid-pattern flex-1 min-h-[350px] overflow-y-auto p-4 sm:p-7 space-y-5"
+        >
+          <div id="welcome" class="max-w-2xl mx-auto text-center py-6 sm:py-12">
+            <div
+              class="w-20 h-20 rounded-[28px] accent-bg grid place-items-center mx-auto mb-6 shadow-[0_0_70px_#f9df4b22]"
+            >
+              <i data-lucide="messages-square" class="w-10 h-10"></i>
+            </div>
+            <p class="accent uppercase tracking-[.2em] text-xs font-black">
+              Your AI research companion
+            </p>
+            <h3 class="text-3xl sm:text-5xl font-black leading-tight mt-3">
+              Your PDFs have <span class="accent">answers.</span>
+            </h3>
+            <p class="muted text-sm sm:text-base max-w-md mx-auto mt-4">
+              Upload a PDF, ask a question, and explore answers alongside
+              supporting page references from your document.
+            </p>
+            <div class="flex flex-wrap justify-center gap-2 mt-7">
+              <button
+                onclick="suggest('Summarize the key points of this document')"
+                class="rounded-full border border-[#68613b] px-4 py-2 text-sm font-bold hover:bg-[#33301d]"
+              >
+                ✦ Summarize key points</button
+              ><button
+                onclick="suggest('What are the main conclusions?')"
+                class="rounded-full border border-[#68613b] px-4 py-2 text-sm font-bold hover:bg-[#33301d]"
+              >
+                ✦ Main conclusions</button
+              ><button
+                onclick="suggest('Explain this document in simple words')"
+                class="rounded-full border border-[#68613b] px-4 py-2 text-sm font-bold hover:bg-[#33301d]"
+              >
+                ✦ Explain simply
+              </button>
+            </div>
+          </div>
+        </section>
+        <footer class="border-t border-white/10 p-3 sm:p-5 bg-[#171717]">
+          <div
+            class="max-w-4xl mx-auto rounded-[24px] bg-[#262622] border border-[#4b4839] focus-within:border-[#f9df4b] flex items-end p-2 gap-2"
+          >
+            <textarea
+              id="question"
+              rows="2"
+              aria-label="Ask a question"
+              placeholder="Ask anything about your PDF..."
+              class="flex-1 min-w-0 bg-transparent outline-none resize-none px-3 py-2 text-sm sm:text-base placeholder:text-[#8b8a80] max-h-40"
+            ></textarea
+            ><button
+              id="askButton"
+              onclick="askQuestion()"
+              aria-label="Send message"
+              class="accent-bg rounded-2xl w-12 h-12 shrink-0 grid place-items-center hover:bg-yellow-200 disabled:opacity-50"
+            >
+              <i data-lucide="arrow-up" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <p class="text-center text-xs muted mt-3">
+            Enter to send · Shift + Enter for a new line · Answers may include
+            source citations
+          </p>
+        </footer>
+      </main>
+    </div>
+    <script>
+      const navigation = performance.getEntriesByType("navigation")[0];
+
+      if (navigation && navigation.type === "reload") {
+        fetch("/reset", {
+          method: "POST",
+          credentials: "same-origin",
+          keepalive: true,
+        })
+          .then(() => {
+            console.log("Previous document deleted.");
+          })
+          .catch((error) => {
+            console.error("Document reset failed:", error);
+          });
+      }
+      if (window.lucide) lucide.createIcons();
+      const $ = (id) => document.getElementById(id);
+      function escapeHTML(value) {
+        const el = document.createElement("div");
+        el.textContent = String(value ?? "");
+        return el.innerHTML;
+      }
+      $("pdfFile").addEventListener("change", (e) => {
+        $("fileLabel").textContent =
+          e.target.files[0]?.name || "Tap to browse documents";
+      });
+      function suggest(q) {
+        $("question").value = q;
+        $("question").focus();
+      }
+      function appendMessage(role, message) {
+        $("welcome")?.remove();
+        const item = document.createElement("div");
+        item.className =
+          "flex " + (role === "user" ? "justify-end" : "justify-start");
+        const isUser = role === "user";
+        item.innerHTML = `<div class="max-w-[95%] sm:max-w-[85%] xl:max-w-[75%] min-w-0"><p class="text-xs font-bold mb-2 ${isUser ? "text-right muted" : "accent"}">${isUser ? "You" : "✦ RAG Assistant"}</p><div class="bubble rounded-[22px] ${isUser ? "rounded-tr-md accent-bg" : "rounded-tl-md bg-[#262622] border border-[#474438]"} px-4 sm:px-5 py-3 sm:py-4 text-sm sm:text-base leading-relaxed">${escapeHTML(message)}</div><div class="sources space-y-2 mt-3"></div></div>`;
+        $("chat").appendChild(item);
+        $("chat").scrollTop = $("chat").scrollHeight;
+        return item;
+      }
+      async function parseResponse(response) {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok)
+          throw Error(data.error || `Request failed (HTTP ${response.status})`);
+        return data;
+      }
+      async function uploadPDF() {
+        const file = $("pdfFile").files[0],
+          status = $("uploadStatus"),
+          button = $("uploadButton");
+        if (!file) {
+          status.textContent = "Please choose a PDF first.";
+          status.className = "text-sm text-red-400 mt-3";
+          return;
+        }
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+          status.textContent = "Only PDF files are supported.";
+          status.className = "text-sm text-red-400 mt-3";
+          return;
+        }
+        const body = new FormData();
+        body.append("file", file);
+        button.disabled = true;
+        status.className = "text-sm text-yellow-200 mt-3";
+        status.textContent = "Processing document, please wait…";
+        try {
+          const data = await parseResponse(
+            await fetch("/upload", { method: "POST", body }),
+          );
+          status.className = "text-sm accent mt-3 break-words";
+          status.textContent = `✓ ${data.filename || file.name} indexed${data.chunks != null ? " · " + data.chunks + " chunks" : ""}`;
+          appendMessage(
+            "assistant",
+            `Your document “${data.filename || file.name}” is ready. Ask a question to get started!`,
+          );
+        } catch (error) {
+          status.className = "text-sm text-red-400 mt-3 break-words";
+          status.textContent = error.message;
+        } finally {
+          button.disabled = false;
+        }
+      }
+      async function askQuestion() {
+        const input = $("question"),
+          question = input.value.trim();
+        if (!question) return;
+        input.value = "";
+        appendMessage("user", question);
+        const pending = appendMessage(
+          "assistant",
+          "Searching the document and preparing an answer…",
+        );
+        const button = $("askButton");
+        button.disabled = true;
+        try {
+          const data = await parseResponse(
+            await fetch("/ask", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question }),
+            }),
+          );
+          pending.querySelector(".bubble").textContent = String(
+            data.answer ?? "No answer was returned.",
+          );
+          if (Array.isArray(data.sources) && data.sources.length) {
+            const area = pending.querySelector(".sources");
+            const title = document.createElement("h4");
+            title.className =
+              "text-xs font-black uppercase tracking-wider accent";
+            title.textContent = `Sources (${data.sources.length})`;
+            area.appendChild(title);
+            for (const source of data.sources) {
+              const card = document.createElement("div");
+              card.className =
+                "rounded-2xl bg-[#22221e] border border-[#474438] p-3 sm:p-4";
+              card.innerHTML = `<div class="flex flex-wrap gap-2 items-center text-sm font-extrabold accent"><i data-lucide="file-text" class="w-4 h-4"></i> ${escapeHTML(source.source || "Document")} ${source.page != null ? `<span class="rounded-full bg-[#393520] px-2 py-0.5 text-xs">Page ${escapeHTML(source.page)}</span>` : ""} ${source.id != null ? `<span class="text-xs muted">#${escapeHTML(source.id)}</span>` : ""}</div><p class="text-sm muted mt-2 whitespace-pre-wrap break-words">${escapeHTML(source.preview || "No excerpt provided")}</p>`;
+              area.appendChild(card);
+            }
+          }
+          if (window.lucide) lucide.createIcons();
+        } catch (error) {
+          const bubble = pending.querySelector(".bubble");
+          bubble.textContent = "Unable to answer: " + error.message;
+          bubble.classList.add("text-red-300");
+        } finally {
+          button.disabled = false;
+          $("chat").scrollTop = $("chat").scrollHeight;
+        }
+      }
+      $("question").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          askQuestion();
+        }
+      });
+    </script>
+  </body>
+</html>
