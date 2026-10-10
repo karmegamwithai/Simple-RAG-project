@@ -1,0 +1,7 @@
+Flask
+PyMuPDF
+faiss-cpu
+numpy
+requestspyth
+github-copilot-sdk
+sentence-transformers
