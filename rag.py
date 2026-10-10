@@ -34,7 +34,22 @@ DEFAULT_TOP_K = int(os.getenv('RAG_TOP_K', '5'))
 API_KEY = os.getenv('GEMINI_API_KEY', '').strip()
 if not API_KEY:
     raise RuntimeError('GEMINI_API_KEY is missing. Set it in your .env file.')
-gemini_client = genai.Client(api_key=API_KEY, vertexai=False)
+    
+load_dotenv(override=True)
+
+GEMINI_API_KEY = os.getenv(
+    "GEMINI_API_KEY", ""
+).strip()
+
+if not GEMINI_API_KEY:
+    raise RuntimeError(
+        "GEMINI_API_KEY is missing from .env"
+    )
+
+gemini_client = genai.Client(
+    api_key=GEMINI_API_KEY,
+    vertexai=False
+)
 _store_lock = threading.RLock()
 
 
