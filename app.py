@@ -1,39 +1,84 @@
 import os
+import uuid
+import shutil
+import tempfile
+import threading
+
+from pathlib import Path
 
 from flask import (
     Flask,
     render_template,
     request,
-    jsonify
+    jsonify,
+    session
 )
 
 from werkzeug.utils import secure_filename
 
-from rag import (
-    create_vector_store,
-    answer_question
+
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
+IS_VERCEL = bool(os.getenv("VERCEL"))
+
+BASE_DIR = Path(
+    tempfile.gettempdir()
+    if IS_VERCEL
+    else Path(__file__).resolve().parent
 )
 
+UPLOAD_FOLDER = BASE_DIR / "rag_uploads"
+
+# Set this before importing rag.py because the RAG
+# module initializes its storage paths during import.
+RAG_DATA_DIR = BASE_DIR / "rag_data"
+
+os.environ["RAG_DATA_DIR"] = str(RAG_DATA_DIR)
+
+UPLOAD_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+RAG_DATA_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+
+# =========================================================
+# IMPORT RAG BACKEND
+# =========================================================
+
+from rag import (
+    create_vector_store,
+    answer_question,
+    clear_vector_store
+)
+
+
+# =========================================================
+# FLASK APP
+# =========================================================
 
 app = Flask(__name__)
 
+app.secret_key = os.environ.get(
+    "FLASK_SECRET_KEY",
+    "local-development-only-change-this"
+)
 
-UPLOAD_FOLDER = "uploads"
+app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
+
+app.config["MAX_CONTENT_LENGTH"] = (
+    20 * 1024 * 1024
+)
 
 ALLOWED_EXTENSIONS = {"pdf"}
 
-MAX_FILE_SIZE = 20 * 1024 * 1024
-
-
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
-
-
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True
-)
+rag_lock = threading.Lock()
 
 
 # =========================================================
@@ -50,6 +95,30 @@ def allowed_file(filename):
 
 
 # =========================================================
+# DELETE DOCUMENT AND VECTOR DATA
+# =========================================================
+
+def delete_document():
+
+    with rag_lock:
+
+        clear_vector_store()
+
+        for filepath in UPLOAD_FOLDER.glob("*"):
+
+            if filepath.is_file():
+
+                filepath.unlink(
+                    missing_ok=True
+                )
+
+    session.pop(
+        "document_uploaded",
+        None
+    )
+
+
+# =========================================================
 # HOME PAGE
 # =========================================================
 
@@ -61,18 +130,50 @@ def home():
     )
 
 
-
 # =========================================================
 # CHAT PAGE
 # =========================================================
 
-
 @app.route("/chat")
 def chat_page():
-    return render_template("chat.html")
+
+    return render_template(
+        "chat.html"
+    )
+
 
 # =========================================================
-# PDF UPLOAD
+# RESET DOCUMENT
+# =========================================================
+
+@app.route(
+    "/reset",
+    methods=["POST"]
+)
+def reset_document():
+
+    try:
+
+        delete_document()
+
+        return jsonify({
+            "success": True,
+            "message": "Document deleted successfully."
+        })
+
+    except Exception as error:
+
+        app.logger.exception(
+            "Failed to reset document"
+        )
+
+        return jsonify({
+            "error": str(error)
+        }), 500
+
+
+# =========================================================
+# UPLOAD PDF
 # =========================================================
 
 @app.route(
@@ -80,6 +181,8 @@ def chat_page():
     methods=["POST"]
 )
 def upload_pdf():
+
+    filepath = None
 
     try:
 
@@ -91,7 +194,7 @@ def upload_pdf():
 
         file = request.files["file"]
 
-        if file.filename == "":
+        if not file.filename:
 
             return jsonify({
                 "error": "Please select a PDF."
@@ -104,20 +207,29 @@ def upload_pdf():
             }), 400
 
         filename = secure_filename(
-            file.filename or ""
+            file.filename
         )
 
-        filepath = os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            filename
+        unique_filename = (
+            f"{uuid.uuid4().hex}_{filename}"
         )
 
-        file.save(filepath)
+        filepath = UPLOAD_FOLDER / unique_filename
 
-        chunks = create_vector_store(
-            filepath,
-            filename
-        )
+        with rag_lock:
+
+            clear_vector_store()
+
+            file.save(
+                str(filepath)
+            )
+
+            chunks = create_vector_store(
+                str(filepath),
+                filename
+            )
+
+        session["document_uploaded"] = True
 
         return jsonify({
             "message": "PDF processed successfully.",
@@ -127,11 +239,23 @@ def upload_pdf():
 
     except Exception as error:
 
-        print(error)
+        app.logger.exception(
+            "PDF processing failed"
+        )
 
         return jsonify({
             "error": str(error)
         }), 500
+
+    finally:
+
+        # Delete original PDF immediately after processing.
+        # FAISS embeddings remain until reset.
+        if filepath is not None:
+
+            filepath.unlink(
+                missing_ok=True
+            )
 
 
 # =========================================================
@@ -146,17 +270,29 @@ def ask():
 
     try:
 
-        data = request.get_json()
+        if not session.get(
+            "document_uploaded"
+        ):
 
-        if not data:
+            return jsonify({
+                "error": "Please upload a PDF first."
+            }), 400
+
+        data = request.get_json(
+            silent=True
+        )
+
+        if not isinstance(data, dict):
 
             return jsonify({
                 "error": "Invalid request."
             }), 400
 
-        question = data.get(
-            "question",
-            ""
+        question = str(
+            data.get(
+                "question",
+                ""
+            )
         ).strip()
 
         if not question:
@@ -165,19 +301,42 @@ def ask():
                 "error": "Question cannot be empty."
             }), 400
 
-        result = answer_question(
-            question
-        )
+        with rag_lock:
 
-        return jsonify(result)
+            result = answer_question(
+                question
+            )
+
+        return jsonify(
+            result
+        )
 
     except Exception as error:
 
-        print(error)
+        app.logger.exception(
+            "Question answering failed"
+        )
 
         return jsonify({
             "error": str(error)
         }), 500
+
+
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+
+@app.route("/health")
+def health():
+
+    return jsonify({
+        "status": "ok",
+        "environment": (
+            "vercel"
+            if IS_VERCEL
+            else "local"
+        )
+    })
 
 
 # =========================================================
@@ -189,5 +348,5 @@ if __name__ == "__main__":
     app.run(
         host="127.0.0.1",
         port=5000,
-        debug=True
+        debug=not IS_VERCEL
     )
