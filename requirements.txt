@@ -1,6 +1,6 @@
 Flask
-PyMuPDF
-faiss-cpu
+google-genai
+python-dotenv
 numpy
-requestspyth
-sentence-transformers
+faiss-cpu
+PyMuPDF
