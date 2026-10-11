@@ -25,7 +25,10 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 INDEX_PATH = DATA_DIR / 'faiss.index'
 METADATA_PATH = DATA_DIR / 'metadata.json'
 STORE_INFO_PATH = DATA_DIR / 'store_info.json'
-EMBED_MODEL = os.getenv('RAG_EMBED_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
+EMBED_MODEL = os.getenv(
+    "RAG_EMBED_MODEL",
+    "sentence-transformers/all-MiniLM-L6-v2"
+).strip()
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
 CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 200
@@ -38,6 +41,17 @@ _store_lock = threading.RLock()
 _embedder = None
 _client = None
 
+
+if EMBED_MODEL == "gemini-embedding-001":
+    raise ValueError(
+        "Invalid embedding model. "
+        "Set RAG_EMBED_MODEL to "
+        "sentence-transformers/all-MiniLM-L6-v2"
+    )
+
+embedding_model = SentenceTransformer(
+    EMBED_MODEL
+)
 
 def _embedding_model():
     global _embedder
